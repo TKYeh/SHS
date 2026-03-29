@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>LIFF Redirector</title>
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+</head>
+<body>
+  <p>正在跳轉至應用程式...</p>
+
+  <script>
+    async function main() {
+      try {
+        // 1. 初始化 LIFF (使用你的 LIFF ID)
+        await liff.init({ liffId: "2009634981-dMcUA7cL" });
+
+        // 2. 取得 Access Token 或其他資訊 (選填)
+        // 如果你的 GAS 需要 Token 辨認身分，可以先在這邊取得
+        const accessToken = liff.getAccessToken();
+
+        // 3. 定義你的 GAS 正式網址
+        const gasUrl = "https://script.google.com/macros/s/AKfycb.../exec";
+
+        // 4. 重導向至 GAS，並把 Token 帶過去
+        // 使用 replace 確保使用者按「返回」時不會卡在跳轉頁
+        window.location.replace(`${gasUrl}?access_token=${accessToken}`);
+        
+      } catch (err) {
+        console.error("LIFF 初始化失敗", err);
+        document.body.innerHTML = "跳轉失敗，請重新開啟：" + err.message;
+      }
+    }
+
+    main();
+  </script>
+</body>
+</html>
