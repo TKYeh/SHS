@@ -14,16 +14,30 @@
         // 1. 初始化 LIFF (使用你的 LIFF ID)
         await liff.init({ liffId: "2009634981-dMcUA7cL" });
 
+        if (!liff.isInClient()) {
+          document.body.innerHTML = "請在 LINE App 內開啟此頁面，再重新嘗試。";
+          return;
+        }
+
+        if (!liff.isLoggedIn()) {
+          document.body.innerHTML = "請先完成 LINE 登入後重新開啟。";
+          return;
+        }
+
         // 2. 取得 Access Token 或其他資訊 (選填)
-        // 如果你的 GAS 需要 Token 辨認身分，可以先在這邊取得
         const accessToken = liff.getAccessToken();
+        if (!accessToken) {
+          console.error("無法取得 accessToken");
+          document.body.innerHTML = "無法取得 LINE 存取權杖，請重新開啟 LINE 頁面。";
+          return;
+        }
 
         // 3. 定義你的 GAS 正式網址
         const gasUrl = "https://script.google.com/macros/s/AKfycbwu8vfDd3zcL2q_SVJmdHO5YBqsbHXpf0dyvj2q6FLaujB-v_UIDYdg7tb06tdFVG97JQ/exec";
 
         // 4. 重導向至 GAS，並把 Token 帶過去
         // 使用 replace 確保使用者按「返回」時不會卡在跳轉頁
-        window.location.replace(`${gasUrl}?access_token=${accessToken}`);
+        window.location.replace(`${gasUrl}?access_token=${encodeURIComponent(accessToken)}`);
         
       } catch (err) {
         console.error("LIFF 初始化失敗", err);
