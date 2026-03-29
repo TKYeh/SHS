@@ -20,7 +20,7 @@
         }
 
         if (!liff.isLoggedIn()) {
-          document.body.innerHTML = "請先完成 LINE 登入後重新開啟。";
+          liff.login();
           return;
         }
 
