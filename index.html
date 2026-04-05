@@ -120,9 +120,28 @@
             border-left: 3px solid #2196f3;
         }
 
-        .course-teacher {
-            background: #f3e5f5;
-            border-left-color: #9c27b0;
+        .course-item.available {
+            background: #e3f2fd;
+            border-left-color: #2196f3;
+            cursor: pointer;
+        }
+
+        .course-item.available:hover {
+            background: #bbdefb;
+        }
+
+        .course-item.reserved {
+            background: #c8e6c9;
+            border-left-color: #4caf50;
+            cursor: default;
+            opacity: 0.8;
+        }
+
+        .course-item.full {
+            background: #ffcccc;
+            border-left-color: #f44336;
+            cursor: default;
+            opacity: 0.6;
         }
 
         .modal {
@@ -381,6 +400,39 @@
             background: #f8d7da;
             color: #721c24;
         }
+
+        .cancel-btn {
+            background-color: #ff6b6b;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            margin-left: 8px;
+            transition: background-color 0.3s;
+            white-space: nowrap;
+        }
+
+        .cancel-btn:hover {
+            background-color: #ff5252;
+        }
+
+        .cancel-btn:active {
+            background-color: #ff3333;
+        }
+
+        .cancel-btn:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+
+        .disabled-btn {
+            background-color: #ccc !important;
+            cursor: not-allowed !important;
+            opacity: 0.5;
+        }
     </style>
 </head>
 <body>
@@ -629,11 +681,31 @@
                 });
 
                 dayCourses.forEach(course => {
+                    const isReserved = reservations.some(r => r.courseId === course.id && r.status === 'active');
+                    const isFull = course.currentStudents >= course.maxStudents;
+                    
                     const courseElement = document.createElement('div');
                     courseElement.className = 'course-item';
+                    
+                    // Add status indicator
+                    if (isReserved) {
+                        courseElement.classList.add('reserved');
+                        courseElement.title = '已預約';
+                    } else if (isFull) {
+                        courseElement.classList.add('full');
+                        courseElement.title = '已滿員';
+                    } else {
+                        courseElement.classList.add('available');
+                        courseElement.style.cursor = 'pointer';
+                    }
+                    
                     const startTime = formatTime(course.startTime);
-                    courseElement.textContent = `${startTime} ${course.courseName}`;  // Safe: using textContent
-                    courseElement.onclick = () => showReserveModal(course);
+                    courseElement.textContent = `${startTime} ${course.courseName}`;
+                    
+                    if (!isReserved && !isFull) {
+                        courseElement.onclick = () => showReserveModal(course);
+                    }
+                    
                     dayElement.appendChild(courseElement);
                 });
 
@@ -778,10 +850,45 @@
 
                 reservationInfo.appendChild(statusDiv);
 
+                // Add cancel button only for active reservations
+                if (reservation.status === 'active') {
+                    const actionDiv = document.createElement('div');
+                    actionDiv.className = 'course-actions';
+
+                    const cancelBtn = document.createElement('button');
+                    cancelBtn.className = 'btn btn-danger';
+                    cancelBtn.textContent = '取消預約';
+                    cancelBtn.onclick = () => cancelReservationHandler(reservation.id);
+
+                    actionDiv.appendChild(cancelBtn);
+                    reservationInfo.appendChild(actionDiv);
+                }
+
                 reservationCard.appendChild(h3);
                 reservationCard.appendChild(reservationInfo);
                 reservationsList.appendChild(reservationCard);
             });
+        }
+
+        // Cancel reservation handler
+        async function cancelReservationHandler(reservationId) {
+            if (!confirm('確認取消預約？')) return;
+
+            try {
+                const result = await fetchGAS('cancelReservation', {
+                    userId: currentUser.userId,
+                    reservationId: reservationId
+                });
+
+                if (result.success) {
+                    showSuccess('已取消預約');
+                    loadData();
+                } else {
+                    showError('取消失敗：' + result.message);
+                }
+            } catch (error) {
+                showError('網路錯誤：' + error.message);
+            }
         }
 
         // Show reserve modal with better validation - XSS Safe
@@ -789,13 +896,13 @@
             // Check if user already reserved this course
             const existingReservation = reservations.find(r => r.courseId === course.id && r.status === 'active');
             if (existingReservation) {
-                showError('您已經預約過此課程了');
+                showModalError('您已經預約過此課程了');
                 return;
             }
 
             // Check if course is full
             if (course.currentStudents >= course.maxStudents) {
-                showError('此課程已滿員');
+                showModalError('此課程已滿員');
                 return;
             }
 
@@ -803,6 +910,10 @@
             const modal = document.getElementById('reserveModal');
             const content = document.getElementById('reserveContent');
             content.innerHTML = '';
+
+            // Clear any previous error messages
+            const prevError = modal.querySelector('.error');
+            if (prevError) prevError.remove();
 
             // Format date and time nicely
             const courseDate = new Date(course.date);
@@ -938,14 +1049,18 @@
 
                 if (result.success) {
                     showSuccess('預約成功！');
-                    document.getElementById('reserveModal').style.display = 'none';
-                    loadData();
+                    // Auto close modal after success
+                    setTimeout(() => {
+                        document.getElementById('reserveModal').style.display = 'none';
+                        loadData();
+                    }, 500);
                 } else {
-                    showError('預約失敗：' + result.message);
+                    showModalError(result.message);
+                    button.textContent = originalText;
+                    button.disabled = false;
                 }
             } catch (error) {
-                showError('網路錯誤：' + error.message);
-            } finally {
+                showModalError('網路錯誤：' + error.message);
                 button.textContent = originalText;
                 button.disabled = false;
             }
@@ -966,6 +1081,21 @@
             successDiv.textContent = message;
             document.querySelector('.container').prepend(successDiv);
             setTimeout(() => successDiv.remove(), 5000);
+        }
+
+        function showModalError(message) {
+            const modal = document.getElementById('reserveModal');
+            const content = document.getElementById('reserveContent');
+            
+            // Remove previous errors
+            const prevError = modal.querySelector('.error');
+            if (prevError) prevError.remove();
+            
+            // Add error at top of modal content
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'error';
+            errorDiv.textContent = message;
+            content.insertBefore(errorDiv, content.firstChild);
         }
 
         function formatTime(timeString) {
