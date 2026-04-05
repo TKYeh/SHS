@@ -356,6 +356,14 @@
             margin: 10px 0;
         }
 
+        .success {
+            background: #d4edda;
+            color: #155724;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+
         .course-detail {
             margin-bottom: 20px;
         }
@@ -984,9 +992,9 @@
             });
         });
 
-        // Modal close
-        document.querySelectorAll('.close').forEach(close => {
-            close.addEventListener('click', function() {
+        // Modal close / cancel buttons
+        document.querySelectorAll('[data-modal]').forEach(element => {
+            element.addEventListener('click', function() {
                 const modalId = this.getAttribute('data-modal');
                 document.getElementById(modalId).style.display = 'none';
             });
@@ -1048,12 +1056,14 @@
                 });
 
                 if (result.success) {
-                    showSuccess('預約成功！');
-                    // Auto close modal after success
+                    showModalSuccess('預約成功！');
+                    // Auto close modal after success so user can see the message
                     setTimeout(() => {
                         document.getElementById('reserveModal').style.display = 'none';
+                        button.textContent = originalText;
+                        button.disabled = false;
                         loadData();
-                    }, 500);
+                    }, 1000);
                 } else {
                     showModalError(result.message);
                     button.textContent = originalText;
@@ -1087,15 +1097,34 @@
             const modal = document.getElementById('reserveModal');
             const content = document.getElementById('reserveContent');
             
-            // Remove previous errors
+            // Remove previous messages
             const prevError = modal.querySelector('.error');
             if (prevError) prevError.remove();
+            const prevSuccess = modal.querySelector('.success');
+            if (prevSuccess) prevSuccess.remove();
             
             // Add error at top of modal content
             const errorDiv = document.createElement('div');
             errorDiv.className = 'error';
             errorDiv.textContent = message;
             content.insertBefore(errorDiv, content.firstChild);
+        }
+
+        function showModalSuccess(message) {
+            const modal = document.getElementById('reserveModal');
+            const content = document.getElementById('reserveContent');
+            
+            // Remove previous messages
+            const prevError = modal.querySelector('.error');
+            if (prevError) prevError.remove();
+            const prevSuccess = modal.querySelector('.success');
+            if (prevSuccess) prevSuccess.remove();
+            
+            // Add success at top of modal content
+            const successDiv = document.createElement('div');
+            successDiv.className = 'success';
+            successDiv.textContent = message;
+            content.insertBefore(successDiv, content.firstChild);
         }
 
         function formatTime(timeString) {
