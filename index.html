@@ -229,23 +229,104 @@
             background: #f8f9fa;
             padding: 15px;
             margin: 10px 0;
-            border-radius: 5px;
+            border-radius: 8px;
             border-left: 4px solid #00c300;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
 
         .course-card h3 {
-            margin-bottom: 5px;
+            margin-bottom: 10px;
+            color: #333;
+            font-size: 1.1em;
+        }
+
+        .course-info {
+            margin-bottom: 15px;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 4px 0;
+            font-size: 14px;
+        }
+
+        .info-row .label {
+            font-weight: bold;
+            color: #555;
+        }
+
+        .info-row .value {
             color: #333;
         }
 
-        .course-card p {
-            margin: 2px 0;
+        .course-actions {
+            text-align: center;
+        }
+
+        .reserve-btn {
+            background: #00c300;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background 0.3s;
+        }
+
+        .reserve-btn:hover {
+            background: #009900;
+        }
+
+        .reservation-info {
+            margin-bottom: 15px;
+        }
+
+        .status-indicator {
+            text-align: center;
+            padding: 8px;
+            border-radius: 5px;
+            margin-top: 10px;
+            font-weight: bold;
             font-size: 14px;
+        }
+
+        .status-active {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-cancelled {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .status-completed {
+            background: #d1ecf1;
+            color: #0c5460;
         }
 
         .loading {
             text-align: center;
-            padding: 20px;
+            padding: 40px 20px;
+            color: #666;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #00c300;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
 
         .error {
@@ -256,12 +337,49 @@
             margin: 10px 0;
         }
 
-        .success {
-            background: #d4edda;
-            color: #155724;
+        .course-detail {
+            margin-bottom: 20px;
+        }
+
+        .course-detail h3 {
+            color: #00c300;
+            margin-bottom: 15px;
+            font-size: 1.2em;
+        }
+
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .detail-row .label {
+            font-weight: bold;
+            color: #555;
+        }
+
+        .detail-row .value {
+            color: #333;
+        }
+
+        .availability-indicator {
+            text-align: center;
             padding: 10px;
             border-radius: 5px;
-            margin: 10px 0;
+            margin-top: 15px;
+            font-weight: bold;
+        }
+
+        .availability-indicator.available {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .availability-indicator.full {
+            background: #f8d7da;
+            color: #721c24;
         }
     </style>
 </head>
@@ -412,8 +530,11 @@
             `;
         }
 
-        // Load courses and reservations
+        // Load courses and reservations with loading states
         async function loadData() {
+            showLoading('coursesList', '載入課程中...');
+            showLoading('reservationsList', '載入預約記錄中...');
+
             try {
                 const [coursesResponse, reservationsResponse] = await Promise.all([
                     fetchGAS('getCourses'),
@@ -429,6 +550,8 @@
 
             } catch (error) {
                 showError('載入資料失敗：' + error.message);
+                hideLoading('coursesList');
+                hideLoading('reservationsList');
             }
         }
 
@@ -500,7 +623,8 @@
                 dayCourses.forEach(course => {
                     const courseElement = document.createElement('div');
                     courseElement.className = 'course-item';
-                    courseElement.textContent = `${course.startTime} ${course.courseName}`;
+                    const startTime = formatTime(course.startTime);
+                    courseElement.textContent = `${startTime} ${course.courseName}`;
                     courseElement.onclick = () => showReserveModal(course);
                     dayElement.appendChild(courseElement);
                 });
@@ -522,13 +646,41 @@
             courses.forEach(course => {
                 const courseCard = document.createElement('div');
                 courseCard.className = 'course-card';
+
+                const courseDate = new Date(course.date);
+                const formattedDate = formatDate(course.date);
+                const startTime = formatTime(course.startTime);
+                const endTime = formatTime(course.endTime);
+
+                const isFull = course.currentStudents >= course.maxStudents;
+                const canReserve = !isFull && !reservations.some(r => r.courseId === course.id && r.status === 'active');
+
                 courseCard.innerHTML = `
                     <h3>${course.courseName}</h3>
-                    <p><strong>老師：</strong>${course.teacherName}</p>
-                    <p><strong>日期：</strong>${course.date}</p>
-                    <p><strong>時間：</strong>${course.startTime} - ${course.endTime}</p>
-                    <p><strong>人數：</strong>${course.currentStudents}/${course.maxStudents}</p>
-                    <button class="btn" onclick="showReserveModal(${JSON.stringify(course).replace(/"/g, '&quot;')})">預約</button>
+                    <div class="course-info">
+                        <div class="info-row">
+                            <span class="label">🏃 老師：</span>
+                            <span class="value">${course.teacherName}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">📅 日期：</span>
+                            <span class="value">${formattedDate}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">⏰ 時間：</span>
+                            <span class="value">${startTime} - ${endTime}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">👥 人數：</span>
+                            <span class="value">${course.currentStudents}/${course.maxStudents}</span>
+                        </div>
+                    </div>
+                    <div class="course-actions">
+                        ${canReserve ?
+                            `<button class="btn reserve-btn" onclick='showReserveModal(${JSON.stringify(course).replace(/"/g, '&quot;')})'>預約課程</button>` :
+                            `<button class="btn disabled-btn" disabled>${isFull ? '已滿員' : '已預約'}</button>`
+                        }
+                    </div>
                 `;
                 coursesList.appendChild(courseCard);
             });
@@ -548,27 +700,94 @@
                 const course = courses.find(c => c.id === reservation.courseId);
                 const reservationCard = document.createElement('div');
                 reservationCard.className = 'course-card';
+
+                const courseDate = course ? formatDate(course.date) : '未知';
+                const startTime = course ? formatTime(course.startTime) : '';
+                const endTime = course ? formatTime(course.endTime) : '';
+                const reservationTime = new Date(reservation.reservationTime).toLocaleString('zh-TW');
+
                 reservationCard.innerHTML = `
                     <h3>${course ? course.courseName : '未知課程'}</h3>
-                    <p><strong>狀態：</strong>${reservation.status}</p>
-                    <p><strong>預約時間：</strong>${new Date(reservation.reservationTime).toLocaleString()}</p>
+                    <div class="reservation-info">
+                        <div class="info-row">
+                            <span class="label">🏃 老師：</span>
+                            <span class="value">${course ? course.teacherName : '未知'}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">📅 日期：</span>
+                            <span class="value">${courseDate}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">⏰ 時間：</span>
+                            <span class="value">${startTime} - ${endTime}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">📝 預約時間：</span>
+                            <span class="value">${reservationTime}</span>
+                        </div>
+                        <div class="status-indicator status-${reservation.status.toLowerCase()}">
+                            狀態：${reservation.status === 'active' ? '已預約' : reservation.status}
+                        </div>
+                    </div>
                 `;
                 reservationsList.appendChild(reservationCard);
             });
         }
 
-        // Show reserve modal
+        // Show reserve modal with better validation
         function showReserveModal(course) {
+            // Check if user already reserved this course
+            const existingReservation = reservations.find(r => r.courseId === course.id && r.status === 'active');
+            if (existingReservation) {
+                showError('您已經預約過此課程了');
+                return;
+            }
+
+            // Check if course is full
+            if (course.currentStudents >= course.maxStudents) {
+                showError('此課程已滿員');
+                return;
+            }
+
             selectedCourseId = course.id;
             const modal = document.getElementById('reserveModal');
             const content = document.getElementById('reserveContent');
 
+            // Format date and time nicely
+            const courseDate = new Date(course.date);
+            const formattedDate = courseDate.toLocaleDateString('zh-TW', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                weekday: 'long'
+            });
+
+            const startTime = formatTime(course.startTime);
+            const endTime = formatTime(course.endTime);
+
             content.innerHTML = `
-                <h3>${course.courseName}</h3>
-                <p><strong>老師：</strong>${course.teacherName}</p>
-                <p><strong>日期：</strong>${course.date}</p>
-                <p><strong>時間：</strong>${course.startTime} - ${course.endTime}</p>
-                <p><strong>目前人數：</strong>${course.currentStudents}/${course.maxStudents}</p>
+                <div class="course-detail">
+                    <h3>${course.courseName}</h3>
+                    <div class="detail-row">
+                        <span class="label">🏃 老師：</span>
+                        <span class="value">${course.teacherName}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="label">📅 日期：</span>
+                        <span class="value">${formattedDate}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="label">⏰ 時間：</span>
+                        <span class="value">${startTime} - ${endTime}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="label">👥 人數：</span>
+                        <span class="value">${course.currentStudents}/${course.maxStudents}</span>
+                    </div>
+                    <div class="availability-indicator ${course.currentStudents >= course.maxStudents ? 'full' : 'available'}">
+                        ${course.currentStudents >= course.maxStudents ? '❌ 已滿員' : '✅ 可預約'}
+                    </div>
+                </div>
             `;
 
             modal.style.display = 'block';
@@ -634,9 +853,14 @@
             }
         });
 
-        // Confirm reservation
+        // Confirm reservation with loading state
         document.getElementById('confirmReserve').addEventListener('click', async function() {
             if (!selectedCourseId) return;
+
+            const button = this;
+            const originalText = button.textContent;
+            button.textContent = '處理中...';
+            button.disabled = true;
 
             try {
                 const result = await fetchGAS('makeReservation', {
@@ -654,6 +878,9 @@
                 }
             } catch (error) {
                 showError('網路錯誤：' + error.message);
+            } finally {
+                button.textContent = originalText;
+                button.disabled = false;
             }
         });
 
@@ -672,6 +899,43 @@
             successDiv.textContent = message;
             document.querySelector('.container').prepend(successDiv);
             setTimeout(() => successDiv.remove(), 5000);
+        }
+
+        function formatTime(timeString) {
+            // Handle different time formats
+            if (timeString.includes('T')) {
+                const time = new Date(timeString);
+                return time.toLocaleTimeString('zh-TW', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: false
+                });
+            }
+            return timeString;
+        }
+
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('zh-TW', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                weekday: 'long'
+            });
+        }
+
+        function showLoading(elementId, message = '載入中...') {
+            const element = document.getElementById(elementId);
+            element.innerHTML = `
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>${message}</p>
+                </div>
+            `;
+        }
+
+        function hideLoading(elementId) {
+            // Loading will be replaced by actual content
         }
 
         // Initialize when page loads
