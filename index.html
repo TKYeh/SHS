@@ -434,18 +434,20 @@
 
         // Fetch data from GAS
         async function fetchGAS(action, data = {}) {
-            const gasUrl = 'https://script.google.com/macros/s/AKfycbxQw9DPT8W1WhoCk3rXxCucmCYeTXGEAE7CswtK8nqLBULqZgNzr6IoAIR1QSfLm2-10g/exec';
+            const gasUrl = 'https://script.google.com/macros/s/AKfycbwf-ZmenOYo-w2v5eWbD0cUIIlsA4Plu7iakT_ptjjx6X--EJL8S68TwisnSbfhxA1uHQ/exec';
 
             try {
+                const body = new URLSearchParams({
+                    action: action,
+                    data: JSON.stringify(data)
+                });
+
                 const response = await fetch(gasUrl, {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json',
+                        'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
                     },
-                    body: JSON.stringify({
-                        action: action,
-                        ...data
-                    })
+                    body: body
                 });
 
                 if (!response.ok) {
