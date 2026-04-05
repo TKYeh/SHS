@@ -439,23 +439,43 @@ export function renderReservations() {
 }
 
 async function cancelReservationHandler(reservationId) {
-    if (!confirm('確認取消預約？')) return;
+    return new Promise((resolve) => {
+        const modal = document.getElementById('cancelConfirmModal');
+        modal.style.display = 'block';
 
-    try {
-        const result = await fetchGAS('cancelReservation', {
-            userId: state.currentUser.userId,
-            reservationId
-        });
+        const confirmBtn = document.getElementById('confirmCancelBtn');
+        const dismissBtn = document.getElementById('dismissCancelBtn');
 
-        if (result.success) {
-            showSuccess('已取消預約');
-            loadData();
-        } else {
-            showError('取消失敗：' + result.message);
+        function cleanup() {
+            modal.style.display = 'none';
+            confirmBtn.removeEventListener('click', onConfirm);
+            dismissBtn.removeEventListener('click', onDismiss);
         }
-    } catch (error) {
-        showError('網路錯誤：' + error.message);
-    }
+
+        function onConfirm() {
+            cleanup();
+            fetchGAS('cancelReservation', {
+                userId: state.currentUser.userId,
+                reservationId
+            }).then(result => {
+                if (result.success) {
+                    showSuccess('已取消預約');
+                    loadData();
+                } else {
+                    showError('取消失敗：' + result.message);
+                }
+            }).catch(error => {
+                showError('網路錯誤：' + error.message);
+            });
+        }
+
+        function onDismiss() {
+            cleanup();
+        }
+
+        confirmBtn.addEventListener('click', onConfirm);
+        dismissBtn.addEventListener('click', onDismiss);
+    });
 }
 
 export function showLoading(elementId, message = '載入中...') {
