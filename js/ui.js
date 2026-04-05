@@ -43,6 +43,9 @@ export function initializeUI() {
     bindCalendarNavigation();
     bindCreateCourseForm();
     bindConfirmReserve();
+    document.getElementById('openCreateCourseModal').addEventListener('click', () => {
+        document.getElementById('createCourseModal').style.display = 'block';
+    });
 }
 
 function bindTabs() {
