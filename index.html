@@ -435,19 +435,15 @@
         // Fetch data from GAS
         async function fetchGAS(action, data = {}) {
             const gasUrl = 'https://script.google.com/macros/s/AKfycbwf-ZmenOYo-w2v5eWbD0cUIIlsA4Plu7iakT_ptjjx6X--EJL8S68TwisnSbfhxA1uHQ/exec';
+            const params = new URLSearchParams({
+                action: action,
+                data: JSON.stringify(data)
+            });
+            const url = `${gasUrl}?${params.toString()}`;
 
             try {
-                const body = new URLSearchParams({
-                    action: action,
-                    data: JSON.stringify(data)
-                });
-
-                const response = await fetch(gasUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
-                    },
-                    body: body
+                const response = await fetch(url, {
+                    method: 'GET'
                 });
 
                 if (!response.ok) {
