@@ -199,6 +199,31 @@ export function closeModal(modalId) {
     }
 }
 
+export function showReserveModal(course) {
+    state.selectedCourseId = course.id;
+
+    const content = document.getElementById('reserveContent');
+    content.innerHTML = '';
+
+    const rows = [
+        ['課程名稱', course.courseName],
+        ['老師', course.teacherName],
+        ['日期', formatDate(course.date)],
+        ['時間', `${formatTime(course.startTime)} - ${formatTime(course.endTime)}`],
+        ['剩餘名額', `${course.maxStudents - course.currentStudents}/${course.maxStudents}`]
+    ];
+    rows.forEach(([label, value]) => {
+        const p = document.createElement('p');
+        const strong = document.createElement('strong');
+        strong.textContent = label + '：';
+        p.appendChild(strong);
+        p.appendChild(document.createTextNode(value));
+        content.appendChild(p);
+    });
+
+    document.getElementById('reserveModal').style.display = 'block';
+}
+
 function updateUserInfo() {
     const userInfo = document.getElementById('userInfo');
     userInfo.innerHTML = '';
