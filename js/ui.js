@@ -278,7 +278,7 @@ export function renderCalendar() {
         });
 
         dayCourses.forEach(course => {
-            const isReserved = state.reservations.some(r => r.courseId === course.id && r.status === 'active');
+            const isReserved = state.reservations.some(r => r.courseId === course.id && r.status === '預約成功');
             const isFull = course.currentStudents >= course.maxStudents;
             const courseElement = document.createElement('div');
             courseElement.className = 'course-item';
@@ -322,7 +322,7 @@ export function renderCourses() {
         const startTime = formatTime(course.startTime);
         const endTime = formatTime(course.endTime);
         const isFull = course.currentStudents >= course.maxStudents;
-        const canReserve = !isFull && !state.reservations.some(r => r.courseId === course.id && r.status === 'active');
+        const canReserve = !isFull && !state.reservations.some(r => r.courseId === course.id && r.status === '預約成功');
 
         const h3 = document.createElement('h3');
         h3.textContent = course.courseName;
@@ -417,11 +417,11 @@ export function renderReservations() {
         });
 
         const statusDiv = document.createElement('div');
-        statusDiv.className = 'status-indicator status-' + reservation.status.toLowerCase();
-        statusDiv.textContent = '狀態：' + (reservation.status === 'active' ? '已預約' : reservation.status);
+        statusDiv.className = 'status-indicator status-' + (reservation.status === '預約成功' ? 'active' : 'cancelled');
+        statusDiv.textContent = '狀態：' + reservation.status;
         reservationInfo.appendChild(statusDiv);
 
-        if (reservation.status === 'active') {
+        if (reservation.status === '預約成功') {
             const actionDiv = document.createElement('div');
             actionDiv.className = 'course-actions';
             const cancelBtn = document.createElement('button');
