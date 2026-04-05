@@ -436,22 +436,29 @@
         async function fetchGAS(action, data = {}) {
             const gasUrl = 'https://script.google.com/macros/s/AKfycbyGo4eKGVq6FUXb2VIAZbeeT60iDVs3CqDvblXoXIKN5s-p2MZxf78O41Yy0OEH40HbSg/exec';
 
-            const response = await fetch(gasUrl, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    action: action,
-                    ...data
-                })
-            });
+            try {
+                const response = await fetch(gasUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        action: action,
+                        ...data
+                    })
+                });
 
-            if (!response.ok) {
-                throw new Error('網路請求失敗');
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const result = await response.json();
+                console.log(`GAS response for ${action}:`, result);
+                return result;
+            } catch (error) {
+                console.error(`GAS request failed for ${action}:`, error);
+                throw error;
             }
-
-            return await response.json();
         }
 
         // Render calendar
