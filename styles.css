@@ -136,6 +136,13 @@ body {
     opacity: 0.6;
 }
 
+.course-item.waitlisted {
+    background: #fff3e0;
+    border-left-color: #ff9800;
+    cursor: default;
+    opacity: 0.8;
+}
+
 .modal {
     display: none;
     position: fixed;
@@ -321,6 +328,11 @@ body {
     color: #721c24;
 }
 
+.status-waitlisted {
+    background: #fff3e0;
+    color: #856404;
+}
+
 .status-completed {
     background: #d1ecf1;
     color: #0c5460;
@@ -439,4 +451,18 @@ body {
     background-color: #ccc !important;
     cursor: not-allowed !important;
     opacity: 0.5;
+}
+
+.waitlist-btn {
+    background: #ff9800;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.waitlist-btn:hover {
+    background: #f57c00;
 }

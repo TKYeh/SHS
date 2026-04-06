@@ -279,24 +279,35 @@ export function renderCalendar() {
 
         dayCourses.forEach(course => {
             const isReserved = state.reservations.some(r => r.courseId === course.id && r.status === '預約成功');
+            const isWaitlisted = state.reservations.some(r => r.courseId === course.id && r.status === '候補');
             const isFull = course.currentStudents >= course.maxStudents;
+            const waitlistFull = (course.waitlistCount || 0) >= 1;
             const courseElement = document.createElement('div');
             courseElement.className = 'course-item';
 
             if (isReserved) {
                 courseElement.classList.add('reserved');
                 courseElement.title = '已預約';
-            } else if (isFull) {
+            } else if (isWaitlisted) {
+                courseElement.classList.add('waitlisted');
+                courseElement.title = '候補中';
+            } else if (isFull && waitlistFull) {
                 courseElement.classList.add('full');
-                courseElement.title = '已滿員';
+                courseElement.title = '已額滿';
+            } else if (isFull) {
+                courseElement.classList.add('available');
+                courseElement.style.cursor = 'pointer';
+                courseElement.title = '加入候補';
             } else {
                 courseElement.classList.add('available');
                 courseElement.style.cursor = 'pointer';
             }
 
             courseElement.textContent = `${formatTime(course.startTime)} ${course.courseName}`;
-            if (!isReserved && !isFull) {
+            if (!isReserved && !isWaitlisted && !isFull) {
                 courseElement.onclick = () => showReserveModal(course);
+            } else if (!isReserved && !isWaitlisted && isFull && !waitlistFull) {
+                courseElement.onclick = () => makeWaitlistHandler(course);
             }
             dayElement.appendChild(courseElement);
         });
@@ -322,7 +333,10 @@ export function renderCourses() {
         const startTime = formatTime(course.startTime);
         const endTime = formatTime(course.endTime);
         const isFull = course.currentStudents >= course.maxStudents;
-        const canReserve = !isFull && !state.reservations.some(r => r.courseId === course.id && r.status === '預約成功');
+        const isReserved = state.reservations.some(r => r.courseId === course.id && r.status === '預約成功');
+        const isWaitlisted = state.reservations.some(r => r.courseId === course.id && r.status === '候補');
+        const waitlistFull = (course.waitlistCount || 0) >= 1;
+        const canReserve = !isFull && !isReserved;
 
         const h3 = document.createElement('h3');
         h3.textContent = course.courseName;
@@ -357,10 +371,18 @@ export function renderCourses() {
             btn.className = 'btn reserve-btn';
             btn.textContent = '預約課程';
             btn.onclick = () => showReserveModal(course);
+        } else if (isWaitlisted) {
+            btn.className = 'btn disabled-btn';
+            btn.disabled = true;
+            btn.textContent = '已候補';
+        } else if (isFull && !isReserved && !waitlistFull) {
+            btn.className = 'btn waitlist-btn';
+            btn.textContent = '加入候補';
+            btn.onclick = () => makeWaitlistHandler(course);
         } else {
             btn.className = 'btn disabled-btn';
             btn.disabled = true;
-            btn.textContent = isFull ? '已滿員' : '已預約';
+            btn.textContent = isReserved ? '已預約' : '已額滿';
         }
         courseActions.appendChild(btn);
 
@@ -417,16 +439,19 @@ export function renderReservations() {
         });
 
         const statusDiv = document.createElement('div');
-        statusDiv.className = 'status-indicator status-' + (reservation.status === '預約成功' ? 'active' : 'cancelled');
+        let statusClass = 'cancelled';
+        if (reservation.status === '預約成功') statusClass = 'active';
+        else if (reservation.status === '候補') statusClass = 'waitlisted';
+        statusDiv.className = 'status-indicator status-' + statusClass;
         statusDiv.textContent = '狀態：' + reservation.status;
         reservationInfo.appendChild(statusDiv);
 
-        if (reservation.status === '預約成功') {
+        if (reservation.status === '預約成功' || reservation.status === '候補') {
             const actionDiv = document.createElement('div');
             actionDiv.className = 'course-actions';
             const cancelBtn = document.createElement('button');
             cancelBtn.className = 'cancel-btn';
-            cancelBtn.textContent = '取消預約';
+            cancelBtn.textContent = reservation.status === '候補' ? '取消候補' : '取消預約';
             cancelBtn.onclick = () => cancelReservationHandler(reservation.id);
             actionDiv.appendChild(cancelBtn);
             reservationInfo.appendChild(actionDiv);
@@ -436,6 +461,56 @@ export function renderReservations() {
         reservationCard.appendChild(reservationInfo);
         reservationsList.appendChild(reservationCard);
     });
+}
+
+async function makeWaitlistHandler(course) {
+    if (!state.currentUser) return;
+
+    const confirmed = await new Promise(resolve => {
+        const modal = document.getElementById('cancelConfirmModal');
+        const msg = modal.querySelector('#cancelConfirmMessage');
+        if (msg) msg.textContent = `確定要加入「${course.courseName}」的候補名單？`;
+
+        const confirmBtn = modal.querySelector('#confirmCancelBtn');
+        const cancelBtn = modal.querySelector('#cancelCancelBtn');
+
+        function cleanup() {
+            modal.style.display = 'none';
+            confirmBtn.onclick = null;
+            cancelBtn.onclick = null;
+        }
+
+        confirmBtn.textContent = '確定加入候補';
+        confirmBtn.onclick = () => { cleanup(); resolve(true); };
+        cancelBtn.onclick = () => { cleanup(); resolve(false); };
+        modal.style.display = 'flex';
+    });
+
+    // Restore button text
+    const confirmBtn = document.getElementById('cancelConfirmModal')?.querySelector('#confirmCancelBtn');
+    if (confirmBtn) confirmBtn.textContent = '確定取消';
+
+    if (!confirmed) return;
+
+    showLoading();
+    try {
+        const result = await fetchGAS('makeWaitlist', {
+            userId: state.currentUser.userId,
+            studentName: state.currentUser.displayName,
+            courseId: course.id
+        });
+
+        if (result.success) {
+            showSuccess('已成功加入候補！');
+            loadData();
+        } else {
+            showError(result.message || '加入候補失敗');
+        }
+    } catch (err) {
+        showError('加入候補失敗：' + err.message);
+    } finally {
+        hideLoading();
+    }
 }
 
 async function cancelReservationHandler(reservationId) {
