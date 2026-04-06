@@ -214,6 +214,14 @@ body {
     background: #545b62;
 }
 
+.btn-danger {
+    background: #ff6b6b;
+}
+
+.btn-danger:hover {
+    background: #ff5252;
+}
+
 .tabs {
     display: flex;
     margin-bottom: 20px;
