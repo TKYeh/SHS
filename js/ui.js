@@ -284,6 +284,7 @@ export function renderCalendar() {
         });
 
         dayCourses.forEach(course => {
+            const isCancelled = course.status === 'cancelled';
             const isReserved = state.reservations.some(r => r.courseId === course.id && r.status === '預約成功');
             const isWaitlisted = state.reservations.some(r => r.courseId === course.id && r.status === '候補');
             const isFull = course.currentStudents >= course.maxStudents;
@@ -291,7 +292,10 @@ export function renderCalendar() {
             const courseElement = document.createElement('div');
             courseElement.className = 'course-item';
 
-            if (isReserved) {
+            if (isCancelled) {
+                courseElement.classList.add('cancelled');
+                courseElement.title = '課程已取消';
+            } else if (isReserved) {
                 courseElement.classList.add('reserved');
                 courseElement.title = '已預約';
             } else if (isWaitlisted) {
@@ -310,9 +314,9 @@ export function renderCalendar() {
             }
 
             courseElement.textContent = `${formatTime(course.startTime)} ${course.courseName}`;
-            if (!isReserved && !isWaitlisted && !isFull) {
+            if (!isCancelled && !isReserved && !isWaitlisted && !isFull) {
                 courseElement.onclick = () => showReserveModal(course);
-            } else if (!isReserved && !isWaitlisted && isFull && !waitlistFull) {
+            } else if (!isCancelled && !isReserved && !isWaitlisted && isFull && !waitlistFull) {
                 courseElement.onclick = () => makeWaitlistHandler(course);
             }
             dayElement.appendChild(courseElement);
@@ -339,13 +343,21 @@ export function renderCourses() {
         const startTime = formatTime(course.startTime);
         const endTime = formatTime(course.endTime);
         const isFull = course.currentStudents >= course.maxStudents;
+        const isCancelled = course.status === 'cancelled';
         const isReserved = state.reservations.some(r => r.courseId === course.id && r.status === '預約成功');
         const isWaitlisted = state.reservations.some(r => r.courseId === course.id && r.status === '候補');
         const waitlistFull = (course.waitlistCount || 0) >= 1;
-        const canReserve = !isFull && !isReserved;
+        const canReserve = !isFull && !isReserved && !isCancelled;
 
         const h3 = document.createElement('h3');
         h3.textContent = course.courseName;
+
+        if (isCancelled) {
+            const badge = document.createElement('span');
+            badge.className = 'cancelled-badge';
+            badge.textContent = ' 已取消開課';
+            h3.appendChild(badge);
+        }
 
         const courseInfo = document.createElement('div');
         courseInfo.className = 'course-info';
@@ -373,7 +385,11 @@ export function renderCourses() {
         const courseActions = document.createElement('div');
         courseActions.className = 'course-actions';
         const btn = document.createElement('button');
-        if (canReserve) {
+        if (isCancelled) {
+            btn.className = 'btn disabled-btn';
+            btn.disabled = true;
+            btn.textContent = '課程已取消';
+        } else if (canReserve) {
             btn.className = 'btn reserve-btn';
             btn.textContent = '預約課程';
             btn.onclick = () => showReserveModal(course);
@@ -448,6 +464,7 @@ export function renderReservations() {
         let statusClass = 'cancelled';
         if (reservation.status === '預約成功') statusClass = 'active';
         else if (reservation.status === '候補') statusClass = 'waitlisted';
+        else if (reservation.status === '課程取消') statusClass = 'course-cancelled';
         statusDiv.className = 'status-indicator status-' + statusClass;
         statusDiv.textContent = '狀態：' + reservation.status;
         reservationInfo.appendChild(statusDiv);
