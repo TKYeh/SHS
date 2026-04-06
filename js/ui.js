@@ -468,7 +468,6 @@ async function makeWaitlistHandler(course) {
 
     if (!confirm(`確定要加入「${course.courseName}」的候補名單？`)) return;
 
-    showLoading();
     try {
         const result = await fetchGAS('makeWaitlist', {
             userId: state.currentUser.userId,
@@ -484,8 +483,6 @@ async function makeWaitlistHandler(course) {
         }
     } catch (err) {
         showError('加入候補失敗：' + err.message);
-    } finally {
-        hideLoading();
     }
 }
 

@@ -137,10 +137,11 @@ body {
 }
 
 .course-item.waitlisted {
-    background: #fff3e0;
-    border-left-color: #ff9800;
+    background: #ff9800;
+    border-left-color: #e65100;
+    color: white;
     cursor: default;
-    opacity: 0.8;
+    opacity: 0.9;
 }
 
 .modal {
