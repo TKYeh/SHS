@@ -466,31 +466,7 @@ export function renderReservations() {
 async function makeWaitlistHandler(course) {
     if (!state.currentUser) return;
 
-    const confirmed = await new Promise(resolve => {
-        const modal = document.getElementById('cancelConfirmModal');
-        const msg = modal.querySelector('#cancelConfirmMessage');
-        if (msg) msg.textContent = `確定要加入「${course.courseName}」的候補名單？`;
-
-        const confirmBtn = modal.querySelector('#confirmCancelBtn');
-        const cancelBtn = modal.querySelector('#cancelCancelBtn');
-
-        function cleanup() {
-            modal.style.display = 'none';
-            confirmBtn.onclick = null;
-            cancelBtn.onclick = null;
-        }
-
-        confirmBtn.textContent = '確定加入候補';
-        confirmBtn.onclick = () => { cleanup(); resolve(true); };
-        cancelBtn.onclick = () => { cleanup(); resolve(false); };
-        modal.style.display = 'flex';
-    });
-
-    // Restore button text
-    const confirmBtn = document.getElementById('cancelConfirmModal')?.querySelector('#confirmCancelBtn');
-    if (confirmBtn) confirmBtn.textContent = '確定取消';
-
-    if (!confirmed) return;
+    if (!confirm(`確定要加入「${course.courseName}」的候補名單？`)) return;
 
     showLoading();
     try {
