@@ -52,12 +52,18 @@ function bindTabs() {
     document.querySelectorAll('.tab').forEach(tab => {
         tab.addEventListener('click', function () {
             const tabName = this.getAttribute('data-tab');
-            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-            this.classList.add('active');
-            document.getElementById(`${tabName}Tab`).classList.add('active');
+            switchTab(tabName);
         });
     });
+}
+
+function switchTab(tabName) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    const tabEl = document.querySelector(`.tab[data-tab="${tabName}"]`);
+    if (tabEl) tabEl.classList.add('active');
+    const contentEl = document.getElementById(`${tabName}Tab`);
+    if (contentEl) contentEl.classList.add('active');
 }
 
 function bindModalButtons() {
@@ -499,7 +505,8 @@ async function makeWaitlistHandler(course) {
 
         if (result.success) {
             showSuccess('已成功加入候補！');
-            loadData();
+            await loadData();
+            switchTab('reservations');
         } else {
             showError(result.message || '加入候補失敗');
         }
